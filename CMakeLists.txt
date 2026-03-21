@@ -1,73 +1,96 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 
-project(ntrip)
+project(ntrip VERSION 1.2.0 LANGUAGES CXX)
 
-set(NTRIP_VERSION_MAJOR 1)
-set(NTRIP_VERSION_MINOR 2)
-set(NTRIP_VERSION_PATCH 0)
-
-option(NTRIP_BUILD_CASTER "Build ntrip caster" OFF)
-option(NTRIP_BUILD_CLIENT "Build ntrip client" ON)
-option(NTRIP_BUILD_SERVER "Build ntrip server" ON)
-option(NTRIP_BUILD_EXAMPLES "Build ntrip examples" OFF)
+option(NTRIP_BUILD_CASTER "Build NtripCaster support" ON)
+option(NTRIP_BUILD_CLIENT "Build NtripClient support" ON)
+option(NTRIP_BUILD_SERVER "Build NtripServer support" ON)
+option(NTRIP_BUILD_EXAMPLES "Build example executables" ON)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message("-- Using default build type: Debug.")
+  message(STATUS "Using default build type: Debug")
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
-endif(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release)
+endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wfatal-errors")
-endif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-
-set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O2 -Wall -g -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
-
-set(CMAKE_LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(CMAKE_INCLUDE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/include)
-
-set(ntrip_include_dirs ${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(SYSTEM ${ntrip_include_dirs})
-
-message(STATUS "Source code version: ${NTRIP_VERSION_MAJOR}.${NTRIP_VERSION_MINOR}.${NTRIP_VERSION_PATCH}")
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(git_utility)
+
+find_package(Threads REQUIRED)
+
 set(GIT_BRANCH "")
 get_git_branch(GIT_BRANCH)
-message(STATUS "Git branch: ${GIT_BRANCH}")
 set(GIT_HASH "")
 get_git_hash(GIT_HASH)
+
+message(STATUS "Source code version: ${PROJECT_VERSION}")
+message(STATUS "Git branch: ${GIT_BRANCH}")
 message(STATUS "Git hash: ${GIT_HASH}")
 
+set(NTRIP_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set(NTRIP_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set(NTRIP_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+
+set(NTRIP_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+file(MAKE_DIRECTORY "${NTRIP_GENERATED_INCLUDE_DIR}")
 configure_file(
-  ${PROJECT_SOURCE_DIR}/src/cmake_definition.h.in
-  ${PROJECT_SOURCE_DIR}/src/cmake_definition.h
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/cmake_definition.h.in"
+  "${NTRIP_GENERATED_INCLUDE_DIR}/cmake_definition.h"
+  @ONLY
 )
 
-aux_source_directory(src src_MAIN)
-
-if (NOT NTRIP_BUILD_CASTER)
-  list(REMOVE_ITEM src_MAIN "src/ntrip_caster.cc")
-  message("-- Not build ntrip caster")
-endif ()
-
-if (NOT NTRIP_BUILD_SERVER)
-  list(REMOVE_ITEM src_MAIN "src/ntrip_server.cc")
-  message("-- Not build ntrip server")
-endif ()
-
-add_library(${PROJECT_NAME}
-  ${src_MAIN}
+set(NTRIP_SOURCES
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/ntrip_util.cc"
 )
+
+if (NTRIP_BUILD_CLIENT)
+  list(APPEND NTRIP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ntrip_client.cc")
+else()
+  message(STATUS "NtripClient support disabled")
+endif()
+
+if (NTRIP_BUILD_SERVER)
+  list(APPEND NTRIP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ntrip_server.cc")
+else()
+  message(STATUS "NtripServer support disabled")
+endif()
+
+if (NTRIP_BUILD_CASTER)
+  list(APPEND NTRIP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ntrip_caster.cc")
+else()
+  message(STATUS "NtripCaster support disabled")
+endif()
+
+add_library(ntrip ${NTRIP_SOURCES})
+add_library(ntrip::ntrip ALIAS ntrip)
+
+target_compile_features(ntrip PUBLIC cxx_std_11)
+target_include_directories(ntrip
+  PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${NTRIP_GENERATED_INCLUDE_DIR}"
+)
+target_link_libraries(ntrip PUBLIC Threads::Threads)
+
+if (MSVC)
+  target_compile_options(ntrip PRIVATE /W4)
+else()
+  target_compile_options(ntrip PRIVATE -Wall)
+endif()
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(ntrip PRIVATE -Wfatal-errors)
+endif()
 
 if (WIN32)
-  target_link_libraries(${PROJECT_NAME} ws2_32)
-endif (WIN32)
+  target_link_libraries(ntrip PUBLIC ws2_32)
+endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ntrip_include_dirs})
+set_target_properties(ntrip PROPERTIES
+  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib"
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib"
+)
 
 if (NTRIP_BUILD_EXAMPLES)
   add_subdirectory(examples)
-endif (NTRIP_BUILD_EXAMPLES)
+endif()
