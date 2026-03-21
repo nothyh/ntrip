@@ -11,23 +11,23 @@ This assumes you are running Ubuntu 16.04
 Clone and run the build:
 
 ```bash
-$ git clone https://github.com/hanoi404/ntrip && cd ntrip
-$ make all
+$ make config
+$ make build
 ```
 
 First step, run the `ntrip_caster_exam`:
 ```bash
-$ ./ntrip_caster_exam
+$ ./build/examples/ntrip_caster_exam
 ```
 
 Second step, run the `ntrip_server_exam`:
 ```bash
-$ ./ntrip_server_exam
+$ ./build/examples/ntrip_server_exam
 ```
 
 Third step， run the `ntrip_client_exam`:
 ```bash
-$ ./ntrip_client_exam
+$ ./build/examples/ntrip_client_exam
 ```
 
 After the above steps are completed, you can see that the example data sent by **NtripServer** flows to **NtripClient** through **NtripCaster**.
@@ -41,9 +41,8 @@ After the above steps are completed, you can see that the example data sent by *
 Configure and compile:
 
 ```bash
-$ mkdir build && cd build
-$ cmake .. -DNTRIP_BUILD_EXAMPLES=ON
-$ make
+$ cmake -S . -B build
+$ cmake --build build
 ```
 
 Output executable file:
@@ -62,9 +61,8 @@ build/examples/ntrip_server_exam
 Configure and compile:
 
 ```bash
-$ mkdir build && cd build
-$ cmake .. -G "Visual Studio 16" -DNTRIP_BUILD_EXAMPLES=ON
-$ cmake --build . --config Release
+$ cmake -S . -B build -G "Visual Studio 16"
+$ cmake --build build --config Release
 ```
 
 Or open `build/ntrip.sln` with **VS2019** after the configuration is complete.
@@ -83,9 +81,8 @@ build/examples/Release/ntrip_server_exam.exe
 Configure and compile:
 
 ```bash
-$ mkdir build && cd build
-$ cmake -G "Unix Makefiles" .. -DNTRIP_BUILD_EXAMPLES=ON
-$ make
+$ cmake -S . -B build -G "Unix Makefiles"
+$ cmake --build build
 ```
 
 Output executable file:
@@ -99,5 +96,7 @@ build/examples/ntrip_server_exam
 
 
 
-for using **NtripCaster**, Add configuration option `-DNTRIP_BUILD_CASTER=ON`.
+All example targets are enabled by default. If needed, you can disable individual
+components with `-DNTRIP_BUILD_CASTER=OFF`, `-DNTRIP_BUILD_CLIENT=OFF`, or
+`-DNTRIP_BUILD_SERVER=OFF`.
 
