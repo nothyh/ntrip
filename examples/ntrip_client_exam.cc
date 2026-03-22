@@ -32,11 +32,11 @@
 using libntrip::NtripClient;
 
 int main(void) {
-  std::string ip = "127.0.0.1";
-  int port = 8090;
-  std::string user = "test01";
-  std::string passwd = "123456";
-  std::string mountpoint = "RTCM32";
+  std::string ip = "120.253.226.97";
+  int port = 8001;
+  std::string user = "cedr49143";
+  std::string passwd = "dvj0cm75";
+  std::string mountpoint = "RTCM33_GRCEJ";
 
   NtripClient ntrip_client;
   ntrip_client.Init(ip, port, user, passwd, mountpoint);
